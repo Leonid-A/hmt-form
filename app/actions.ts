@@ -22,14 +22,14 @@ export async function submitPropertyForm(
 ): Promise<SubmitPropertyFormState> {
   const rawPayload = formData.get("payload");
   if (typeof rawPayload !== "string") {
-    return initialError("Չստացվեց կարդալ ձևի տվյալները։");
+    return initialError("Չստացվեց կարդալ ուղարկված տվյալները։");
   }
 
   let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(rawPayload);
   } catch {
-    return initialError("Ձևի տվյալների ձևաչափը անվավեր է։");
+    return initialError("Ուղարկված տվյալների ձևաչափը անվավեր է։");
   }
 
   const parsed = rawSubmissionSchema.safeParse(parsedJson);
