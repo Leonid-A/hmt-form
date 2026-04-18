@@ -1,9 +1,11 @@
 import { z } from "zod";
 
+/** Կոդում ֆիքսված՝ փոխելու դեպքում խմբագրեք այստեղ (URI-ում db path չի օգտագործվում)։ */
+export const MONGODB_DB_NAME = "hmt_form";
+export const MONGODB_COLLECTION_NAME = "submissions";
+
 const serverEnvSchema = z.object({
   MONGODB_URI: z.string().min(1, "MONGODB_URI պարտադիր է"),
-  MONGODB_DB: z.string().min(1).default("hmt_form"),
-  MONGODB_COLLECTION: z.string().min(1).default("submissions"),
 });
 
 export type ServerConfig = {
@@ -17,16 +19,13 @@ export type ServerConfig = {
 let cached: ServerConfig | null = null;
 
 /**
- * Սերվերային կոնֆիգ՝ կարդում է միայն process.env-ը (գաղտնիքները՝ .env.local / host env)։
- * Կանչել միայն սերվերային կոդից (Server Actions, Route Handlers, lib/mongodb)։
+ * Սերվերային կոնֆիգ՝ env-ից միայն `MONGODB_URI`։ DB և collection՝ `MONGODB_DB_NAME` / `MONGODB_COLLECTION_NAME`։
  */
 export function getServerConfig(): ServerConfig {
   if (cached) return cached;
 
   const parsed = serverEnvSchema.safeParse({
     MONGODB_URI: process.env.MONGODB_URI,
-    MONGODB_DB: process.env.MONGODB_DB,
-    MONGODB_COLLECTION: process.env.MONGODB_COLLECTION,
   });
 
   if (!parsed.success) {
@@ -34,12 +33,11 @@ export function getServerConfig(): ServerConfig {
     throw new Error(`Սերվերի միջավայրի սխալ: ${msg}`);
   }
 
-  const data = parsed.data;
   cached = {
     mongodb: {
-      uri: data.MONGODB_URI,
-      dbName: data.MONGODB_DB,
-      collectionName: data.MONGODB_COLLECTION,
+      uri: parsed.data.MONGODB_URI,
+      dbName: MONGODB_DB_NAME,
+      collectionName: MONGODB_COLLECTION_NAME,
     },
   };
   return cached;
