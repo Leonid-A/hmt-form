@@ -51,6 +51,10 @@ const CONTACT_SLOTS_MAX = 5;
 /** Վարձակալի հեռախոս/էլ. փոստ՝ մեկական տող (ընդհանուր 5-ից մեկը) */
 const RENTER_SINGLE_CONTACT_SLOTS = 1;
 
+/** Միասնական չափ՝ բրաուզերների native checkbox-ների տարբերության համար */
+const FLAG_CHECKBOX_CLASS =
+  "m-0 size-4 min-h-4 min-w-4 max-h-4 max-w-4 shrink-0 cursor-pointer rounded border border-zinc-400 bg-white accent-zinc-900 dark:border-zinc-500 dark:bg-zinc-950 dark:accent-zinc-100 disabled:cursor-not-allowed disabled:opacity-60";
+
 /** Սեփականատիրոջ և վարձակալի մուտքերի ընդհանուր երկարությունը չգերազանցի `max`-ը, ամեն կողմում առնվազն 1 տող */
 function trimContactRowsToMax(
   owner: string[],
@@ -304,22 +308,24 @@ export function PropertyForm() {
       </p>
 
       <div className="mt-6 space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-1 size-4 rounded border-zinc-400"
-            checked={notOwnerAnymore}
-            disabled={forRent}
-            onChange={(e) => {
-              const on = e.target.checked;
-              setNotOwnerAnymore(on);
-              if (on) {
-                setForRent(false);
-                setNewOwner({ name: "", phones: [""], emails: [""] });
-              }
-            }}
-          />
-          <span>
+        <label className="grid cursor-pointer grid-cols-[1rem_minmax(0,1fr)] items-start gap-x-3 gap-y-0">
+          <span className="flex h-4 w-4 shrink-0 items-start justify-center overflow-hidden pt-0.5">
+            <input
+              type="checkbox"
+              className={FLAG_CHECKBOX_CLASS}
+              checked={notOwnerAnymore}
+              disabled={forRent}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setNotOwnerAnymore(on);
+                if (on) {
+                  setForRent(false);
+                  setNewOwner({ name: "", phones: [""], emails: [""] });
+                }
+              }}
+            />
+          </span>
+          <span className="min-w-0">
             <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-50">
               Այլևս սեփականատեր չեմ
             </span>
@@ -334,22 +340,24 @@ export function PropertyForm() {
           </span>
         </label>
 
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-1 size-4 rounded border-zinc-400"
-            checked={forRent}
-            disabled={notOwnerAnymore}
-            onChange={(e) => {
-              const on = e.target.checked;
-              setForRent(on);
-              if (on) {
-                setNotOwnerAnymore(false);
-                setRenter(emptyPerson());
-              }
-            }}
-          />
-          <span>
+        <label className="grid cursor-pointer grid-cols-[1rem_minmax(0,1fr)] items-start gap-x-3 gap-y-0">
+          <span className="flex h-4 w-4 shrink-0 items-start justify-center overflow-hidden pt-0.5">
+            <input
+              type="checkbox"
+              className={FLAG_CHECKBOX_CLASS}
+              checked={forRent}
+              disabled={notOwnerAnymore}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setForRent(on);
+                if (on) {
+                  setNotOwnerAnymore(false);
+                  setRenter(emptyPerson());
+                }
+              }}
+            />
+          </span>
+          <span className="min-w-0">
             <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-50">
               Սեփականատերը տալիս է վարձակալության
             </span>
