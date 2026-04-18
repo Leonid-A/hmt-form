@@ -472,7 +472,7 @@ export function PropertyForm() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <FieldLabel htmlFor="property-id">Գույքի եզակի նույնացուցիչ</FieldLabel>
+                <FieldLabel htmlFor="property-id">Գույքի նույնացուցիչը համատիրությունում</FieldLabel>
                 <TextInput
                   id="property-id"
                   value={common.propertyUniqueId}
