@@ -1,11 +1,14 @@
 import { z } from "zod";
 
+import { isValidArmenianPhone } from "@/lib/validation/armenianPhone";
+
 const phoneItem = z
   .string()
   .trim()
   .min(5, "Հեռախոսը շատ կարճ է")
   .max(32)
-  .regex(/^[0-9+\s()-]+$/, "Թույլատրվում են միայն թվեր, +, բացատ, -, ()");
+  .regex(/^[0-9+\s()-]+$/, "Թույլատրվում են միայն թվեր, +, բացատ, -, ()")
+  .refine(isValidArmenianPhone, "Մուտքագրեք վավեր հայկական հեռախոսահամար (+374 կամ 0…)");
 
 const emailItem = z.string().trim().email("Անվավեր էլ. փոստ");
 
