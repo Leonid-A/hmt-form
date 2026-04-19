@@ -29,6 +29,15 @@ function singleContact(item: z.ZodString, requiredMsg: string) {
     .pipe(z.array(item).length(1, requiredMsg));
 }
 
+/** «Այլևս սեփականատեր չեմ» ռեժիմ՝ նոր սեփականատիրոջ դաշտերը լրացուցիչ են */
+function singleOptionalContact(item: z.ZodString) {
+  return z
+    .array(z.string())
+    .max(1, "Թույլատրվում է միայն մեկ մուտք")
+    .transform((arr) => arr.map((s) => s.trim()).filter((s) => s.length > 0))
+    .pipe(z.array(item).max(1));
+}
+
 export const commonFieldsSchema = z.object({
   propertyUniqueId: z.string().trim().min(1, "Լրացրեք գույքի նույնացուցիչը").max(200),
   ownerName: z.string().trim().min(1, "Լրացրեք սեփականատիրոջ անունը").max(200),
@@ -41,9 +50,8 @@ export const commonFieldsSchema = z.object({
 });
 
 export const newOwnerSchema = z.object({
-  name: z.string().trim().min(1, "Լրացրեք նոր սեփականատիրոջ անունը").max(200),
-  phones: singleContact(phoneItem, "Լրացրեք նոր սեփականատիրոջ հեռախոսահամարը"),
-  emails: singleContact(emailItem, "Լրացրեք նոր սեփականատիրոջ էլ. փոստը"),
+  name: z.string().trim().max(200),
+  phones: singleOptionalContact(phoneItem),
 });
 
 export const renterSchema = z.object({
@@ -76,13 +84,6 @@ export const rawSubmissionSchema = z
     }
 
     if (notOwnerAnymore) {
-      if (!val.newOwner) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Լրացրեք նոր սեփականատիրոջ տվյալները",
-          path: ["newOwner"],
-        });
-      }
       if (val.common) {
         ctx.addIssue({
           code: "custom",

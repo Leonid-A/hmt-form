@@ -30,6 +30,11 @@ type PersonContactState = {
   emails: string[];
 };
 
+type NewOwnerState = {
+  name: string;
+  phones: string[];
+};
+
 const emptyCommon = (): CommonState => ({
   propertyUniqueId: "",
   ownerName: "",
@@ -47,13 +52,30 @@ const emptyPerson = (): PersonContactState => ({
   emails: [""],
 });
 
+const emptyNewOwner = (): NewOwnerState => ({
+  name: "",
+  phones: [""],
+});
+
 const CONTACT_SLOTS_MAX = 5;
 /** Վարձակալի հեռախոս/էլ. փոստ՝ մեկական տող (ընդհանուր 5-ից մեկը) */
 const RENTER_SINGLE_CONTACT_SLOTS = 1;
 
-/** Միասնական չափ՝ բրաուզերների native checkbox-ների տարբերության համար */
-const FLAG_CHECKBOX_CLASS =
-  "m-0 size-4 min-h-4 min-w-4 max-h-4 max-w-4 shrink-0 cursor-pointer rounded border border-zinc-400 bg-white accent-zinc-900 dark:border-zinc-500 dark:bg-zinc-950 dark:accent-zinc-100 disabled:cursor-not-allowed disabled:opacity-60";
+type SubmissionModeRadio = "owner" | "notOwner" | "forRent";
+
+const RADIO_GROUP_NAME = "submission-mode";
+
+const RADIO_INPUT_CLASS =
+  "mt-0.5 size-4 shrink-0 cursor-pointer accent-sky-600 dark:accent-sky-400";
+
+function submissionModeRowClass(active: boolean): string {
+  return [
+    "flex cursor-pointer items-start gap-3 rounded-lg border-2 px-3 py-2.5 transition-colors",
+    active
+      ? "border-sky-600 bg-sky-50 shadow-sm dark:border-sky-400 dark:bg-sky-950/55 dark:shadow-none"
+      : "border-zinc-200/90 bg-white/80 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950/40 dark:hover:border-zinc-600 dark:hover:bg-zinc-900/60",
+  ].join(" ");
+}
 
 /** Սեփականատիրոջ և վարձակալի մուտքերի ընդհանուր երկարությունը չգերազանցի `max`-ը, ամեն կողմում առնվազն 1 տող */
 function trimContactRowsToMax(
@@ -74,12 +96,22 @@ function trimContactRowsToMax(
   return [o, r];
 }
 
+function RequiredMark() {
+  return (
+    <span className="ml-0.5 font-semibold text-red-600 dark:text-red-400" aria-hidden="true">
+      *
+    </span>
+  );
+}
+
 function FieldLabel({
   htmlFor,
   children,
+  required = false,
 }: {
   htmlFor: string;
   children: ReactNode;
+  required?: boolean;
 }) {
   return (
     <label
@@ -87,6 +119,7 @@ function FieldLabel({
       className="mb-1 block text-sm font-medium text-zinc-800 dark:text-zinc-100"
     >
       {children}
+      {required ? <RequiredMark /> : null}
     </label>
   );
 }
@@ -112,6 +145,7 @@ function StringListEditor({
   canRemove,
   combinedSlotCount,
   combinedSlotMax = 5,
+  required = false,
 }: {
   idPrefix: string;
   label: string;
@@ -125,10 +159,14 @@ function StringListEditor({
   /** Երբ տրված է՝ «Ավելացնել»-ում ցուցադրվում է ընդհանուր (սեփականատեր+վարձակալ) հաշվարկը */
   combinedSlotCount?: number;
   combinedSlotMax?: number;
+  required?: boolean;
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{label}</p>
+      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
+        {label}
+        {required ? <RequiredMark /> : null}
+      </p>
       <ul className="space-y-2">
         {values.map((v, i) => (
           <li key={`${idPrefix}-${i}`} className="flex gap-2">
@@ -180,7 +218,7 @@ export function PropertyForm() {
   const [forRent, setForRent] = useState(false);
 
   const [common, setCommon] = useState<CommonState>(emptyCommon);
-  const [newOwner, setNewOwner] = useState<PersonContactState>(emptyPerson);
+  const [newOwner, setNewOwner] = useState<NewOwnerState>(emptyNewOwner);
   const [renter, setRenter] = useState<PersonContactState>(emptyPerson);
 
   const [state, formAction, isPending] = useActionState(submitPropertyForm, null);
@@ -300,77 +338,93 @@ export function PropertyForm() {
     );
   }
 
+  const submissionMode: SubmissionModeRadio = notOwnerAnymore
+    ? "notOwner"
+    : forRent
+      ? "forRent"
+      : "owner";
+
+  function applySubmissionMode(mode: SubmissionModeRadio) {
+    if (mode === "owner") {
+      setNotOwnerAnymore(false);
+      setForRent(false);
+      return;
+    }
+    if (mode === "notOwner") {
+      setNotOwnerAnymore(true);
+      setForRent(false);
+      setNewOwner(emptyNewOwner());
+      return;
+    }
+    setNotOwnerAnymore(false);
+    setForRent(true);
+    setRenter(emptyPerson());
+  }
+
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-8">
-      <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Տվյալների ձև</h2>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        Լրացրեք համապատասխան բաժինները։ Անջատիչները փոխադարձ բացառությամբ են աշխատում։
-      </p>
-
-      <div className="mt-6 space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-        <label className="grid cursor-pointer grid-cols-[1rem_minmax(0,1fr)] items-start gap-x-3 gap-y-0">
-          <span className="flex h-4 w-4 shrink-0 items-start justify-center overflow-hidden pt-0.5">
-            <input
-              type="checkbox"
-              className={FLAG_CHECKBOX_CLASS}
-              checked={notOwnerAnymore}
-              disabled={forRent}
-              onChange={(e) => {
-                const on = e.target.checked;
-                setNotOwnerAnymore(on);
-                if (on) {
-                  setForRent(false);
-                  setNewOwner({ name: "", phones: [""], emails: [""] });
-                }
-              }}
-            />
-          </span>
-          <span className="min-w-0">
-            <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-50">
-              Այլևս սեփականատեր չեմ
-            </span>
-            <span className="mt-0.5 block text-xs text-zinc-600 dark:text-zinc-400">
-              Միացնելու դեպքում ցուցադրվում են միայն նոր սեփականատիրոջ կոնտակտները։
-            </span>
-            {forRent ? (
-              <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
-                Անջատեք «վարձակալության» անջատիչը՝ այս մեկը միացնելու համար։
-              </span>
-            ) : null}
+      <div
+        className="mt-1 space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40"
+        role="radiogroup"
+        aria-label="Ուղարկման ռեժիմ"
+      >
+        <label className={submissionModeRowClass(submissionMode === "owner")}>
+          <input
+            type="radio"
+            name={RADIO_GROUP_NAME}
+            value="owner"
+            className={RADIO_INPUT_CLASS}
+            checked={submissionMode === "owner"}
+            onChange={() => applySubmissionMode("owner")}
+          />
+          <span
+            className={
+              submissionMode === "owner"
+                ? "min-w-0 text-sm font-semibold text-sky-950 dark:text-sky-100"
+                : "min-w-0 text-sm font-medium text-zinc-900 dark:text-zinc-50"
+            }
+          >
+            Սեփականատիրոջ ընդհանուր տվյալներ
           </span>
         </label>
 
-        <label className="grid cursor-pointer grid-cols-[1rem_minmax(0,1fr)] items-start gap-x-3 gap-y-0">
-          <span className="flex h-4 w-4 shrink-0 items-start justify-center overflow-hidden pt-0.5">
-            <input
-              type="checkbox"
-              className={FLAG_CHECKBOX_CLASS}
-              checked={forRent}
-              disabled={notOwnerAnymore}
-              onChange={(e) => {
-                const on = e.target.checked;
-                setForRent(on);
-                if (on) {
-                  setNotOwnerAnymore(false);
-                  setRenter(emptyPerson());
-                }
-              }}
-            />
+        <label className={submissionModeRowClass(submissionMode === "notOwner")}>
+          <input
+            type="radio"
+            name={RADIO_GROUP_NAME}
+            value="notOwner"
+            className={RADIO_INPUT_CLASS}
+            checked={submissionMode === "notOwner"}
+            onChange={() => applySubmissionMode("notOwner")}
+          />
+          <span
+            className={
+              submissionMode === "notOwner"
+                ? "min-w-0 text-sm font-semibold text-sky-950 dark:text-sky-100"
+                : "min-w-0 text-sm font-medium text-zinc-900 dark:text-zinc-50"
+            }
+          >
+            Այլևս սեփականատեր չեմ
           </span>
-          <span className="min-w-0">
-            <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-50">
-              Սեփականատերը տալիս է վարձակալության
-            </span>
-            <span className="mt-0.5 block text-xs text-zinc-600 dark:text-zinc-400">
-              Վարձակալը լրացնում է մեկ հեռախոս և մեկ էլ. փոստ։ Սեփականատիրոջ կոնտակտների
-              մուտքերը (ծառայությունների համար)՝ մինչև 4 հեռախոս և 4 էլ. փոստ, որ ընդհանուրը
-              լինի առավելագույնը 5։
-            </span>
-            {notOwnerAnymore ? (
-              <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
-                Անջատեք «այլևս սեփականատեր չեմ» անջատիչը՝ այս մեկը միացնելու համար։
-              </span>
-            ) : null}
+        </label>
+
+        <label className={submissionModeRowClass(submissionMode === "forRent")}>
+          <input
+            type="radio"
+            name={RADIO_GROUP_NAME}
+            value="forRent"
+            className={RADIO_INPUT_CLASS}
+            checked={submissionMode === "forRent"}
+            onChange={() => applySubmissionMode("forRent")}
+          />
+          <span
+            className={
+              submissionMode === "forRent"
+                ? "min-w-0 text-sm font-semibold text-sky-950 dark:text-sky-100"
+                : "min-w-0 text-sm font-medium text-zinc-900 dark:text-zinc-50"
+            }
+          >
+            Սեփականատերը տալիս է վարձակալության
           </span>
         </label>
       </div>
@@ -409,25 +463,6 @@ export function PropertyForm() {
                   setNewOwner((p) => ({ ...p, phones: [e.target.value] }))
                 }
               />
-              <p className="mt-1 text-xs text-zinc-500">
-                Այս ռեժիմում թույլատրվում է միայն մեկ հեռախոսահամար։
-              </p>
-            </div>
-            <div>
-              <FieldLabel htmlFor="newOwner-email">Էլ. փոստ</FieldLabel>
-              <TextInput
-                id="newOwner-email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                value={newOwner.emails[0] ?? ""}
-                onChange={(e) =>
-                  setNewOwner((p) => ({ ...p, emails: [e.target.value] }))
-                }
-              />
-              <p className="mt-1 text-xs text-zinc-500">
-                Այս ռեժիմում թույլատրվում է միայն մեկ էլ. փոստ։
-              </p>
             </div>
           </div>
         ) : (
@@ -442,7 +477,9 @@ export function PropertyForm() {
                   Վարձակալի տվյալներ
                 </h4>
                 <div>
-                  <FieldLabel htmlFor="renter-name">Վարձակալի անուն</FieldLabel>
+                  <FieldLabel htmlFor="renter-name" required>
+                    Վարձակալի անուն
+                  </FieldLabel>
                   <TextInput
                     id="renter-name"
                     value={renter.name}
@@ -450,7 +487,9 @@ export function PropertyForm() {
                   />
                 </div>
                 <div>
-                  <FieldLabel htmlFor="renter-phone">Վարձակալի հեռախոսահամար</FieldLabel>
+                  <FieldLabel htmlFor="renter-phone" required>
+                    Վարձակալի հեռախոսահամար
+                  </FieldLabel>
                   <TextInput
                     id="renter-phone"
                     type="tel"
@@ -463,7 +502,9 @@ export function PropertyForm() {
                   />
                 </div>
                 <div>
-                  <FieldLabel htmlFor="renter-email">Վարձակալի էլ. փոստ</FieldLabel>
+                  <FieldLabel htmlFor="renter-email" required>
+                    Վարձակալի էլ. փոստ
+                  </FieldLabel>
                   <TextInput
                     id="renter-email"
                     type="email"
@@ -480,7 +521,9 @@ export function PropertyForm() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <FieldLabel htmlFor="property-id">Գույքի նույնացուցիչը համատիրությունում</FieldLabel>
+                <FieldLabel htmlFor="property-id" required>
+                  Գույքի նույնացուցիչը համատիրությունում
+                </FieldLabel>
                 <TextInput
                   id="property-id"
                   value={common.propertyUniqueId}
@@ -488,7 +531,9 @@ export function PropertyForm() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <FieldLabel htmlFor="owner-name">Սեփականատիրոջ անուն</FieldLabel>
+                <FieldLabel htmlFor="owner-name" required>
+                  Սեփականատիրոջ անուն
+                </FieldLabel>
                 <TextInput
                   id="owner-name"
                   value={common.ownerName}
@@ -512,6 +557,7 @@ export function PropertyForm() {
               canRemove={common.phones.length > 1}
               combinedSlotCount={forRent ? totalPhoneSlots : undefined}
               combinedSlotMax={CONTACT_SLOTS_MAX}
+              required
             />
             <StringListEditor
               idPrefix="common-email"
@@ -529,10 +575,13 @@ export function PropertyForm() {
               canRemove={common.emails.length > 1}
               combinedSlotCount={forRent ? totalEmailSlots : undefined}
               combinedSlotMax={CONTACT_SLOTS_MAX}
+              required
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <FieldLabel htmlFor="car-brand">Մեքենայի մակնիշ</FieldLabel>
+                <FieldLabel htmlFor="car-brand" required>
+                  Մեքենայի մակնիշ
+                </FieldLabel>
                 <TextInput
                   id="car-brand"
                   value={common.carBrand}
@@ -540,7 +589,9 @@ export function PropertyForm() {
                 />
               </div>
               <div>
-                <FieldLabel htmlFor="car-model">Մոդել</FieldLabel>
+                <FieldLabel htmlFor="car-model" required>
+                  Մոդել
+                </FieldLabel>
                 <TextInput
                   id="car-model"
                   value={common.carModel}
@@ -548,7 +599,9 @@ export function PropertyForm() {
                 />
               </div>
               <div>
-                <FieldLabel htmlFor="car-color">Գույն</FieldLabel>
+                <FieldLabel htmlFor="car-color" required>
+                  Գույն
+                </FieldLabel>
                 <TextInput
                   id="car-color"
                   value={common.carColor}
@@ -556,7 +609,9 @@ export function PropertyForm() {
                 />
               </div>
               <div>
-                <FieldLabel htmlFor="car-number">Համարանիշ</FieldLabel>
+                <FieldLabel htmlFor="car-number" required>
+                  Համարանիշ
+                </FieldLabel>
                 <TextInput
                   id="car-number"
                   value={common.carNumber}
