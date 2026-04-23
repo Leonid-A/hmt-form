@@ -51,10 +51,10 @@ export const commonFieldsSchema = z
     email3: optionalEmailSlot,
     email4: optionalEmailSlot,
     email5: optionalEmailSlot,
-    carBrand: z.string().trim().min(1, "Լրացրեք մակնիշը").max(100),
-    carModel: z.string().trim().min(1, "Լրացրեք մոդելը").max(100),
-    carColor: z.string().trim().min(1, "Լրացրեք գույնը").max(100),
-    carNumber: z.string().trim().min(1, "Լրացրեք համարանիշը").max(50),
+    carBrand: z.string().trim().max(100).optional().default(""),
+    carModel: z.string().trim().max(100).optional().default(""),
+    carColor: z.string().trim().max(100).optional().default(""),
+    carNumber: z.string().trim().max(50).optional().default(""),
     car2Brand: z.string().trim().max(100).optional().default(""),
     car2Model: z.string().trim().max(100).optional().default(""),
     car2Color: z.string().trim().max(100).optional().default(""),
@@ -79,6 +79,28 @@ export const commonFieldsSchema = z
       });
     }
 
+    const c1 = [
+      (data.carBrand ?? "").trim(),
+      (data.carModel ?? "").trim(),
+      (data.carColor ?? "").trim(),
+      (data.carNumber ?? "").trim(),
+    ];
+    const anyC1 = c1.some((s) => s.length > 0);
+    if (anyC1) {
+      if (!c1[0]) {
+        ctx.addIssue({ code: "custom", message: "Լրացրեք մեքենայի մակնիշը", path: ["carBrand"] });
+      }
+      if (!c1[1]) {
+        ctx.addIssue({ code: "custom", message: "Լրացրեք մեքենայի մոդելը", path: ["carModel"] });
+      }
+      if (!c1[2]) {
+        ctx.addIssue({ code: "custom", message: "Լրացրեք մեքենայի գույնը", path: ["carColor"] });
+      }
+      if (!c1[3]) {
+        ctx.addIssue({ code: "custom", message: "Լրացրեք մեքենայի համարանիշը", path: ["carNumber"] });
+      }
+    }
+
     const c2 = [
       (data.car2Brand ?? "").trim(),
       (data.car2Model ?? "").trim(),
@@ -86,6 +108,13 @@ export const commonFieldsSchema = z
       (data.car2Number ?? "").trim(),
     ];
     const anyC2 = c2.some((s) => s.length > 0);
+    if (anyC2 && !anyC1) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Երկրորդ մեքենան թույլատրվում է միայն առաջին մեքենայի տվյալները լրացնելուց հետո",
+        path: ["car2Brand"],
+      });
+    }
     if (anyC2) {
       if (!c2[0]) {
         ctx.addIssue({ code: "custom", message: "Լրացրեք երկրորդ մեքենայի մակնիշը", path: ["car2Brand"] });

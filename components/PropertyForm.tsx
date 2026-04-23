@@ -726,12 +726,15 @@ export function PropertyForm() {
             />
             <div className="space-y-4">
               <h4 className="text-base font-medium text-zinc-900 dark:text-zinc-50">
-                Առաջին մեքենա
+                Մեքենա
               </h4>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Ըստ ցանկության. եթե մեքենա չկա՝ դաշտերը թողեք դատարկ։
+              </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <FieldLabel htmlFor="car-brand" required>
-                    Մեքենայի մակնիշ
+                  <FieldLabel htmlFor="car-brand">
+                    Մակնիշ
                   </FieldLabel>
                   <TextInput
                     id="car-brand"
@@ -740,7 +743,7 @@ export function PropertyForm() {
                   />
                 </div>
                 <div>
-                  <FieldLabel htmlFor="car-model" required>
+                  <FieldLabel htmlFor="car-model">
                     Մոդել
                   </FieldLabel>
                   <TextInput
@@ -750,7 +753,7 @@ export function PropertyForm() {
                   />
                 </div>
                 <div>
-                  <FieldLabel htmlFor="car-color" required>
+                  <FieldLabel htmlFor="car-color">
                     Գույն
                   </FieldLabel>
                   <TextInput
@@ -760,7 +763,7 @@ export function PropertyForm() {
                   />
                 </div>
                 <div>
-                  <FieldLabel htmlFor="car-number" required>
+                  <FieldLabel htmlFor="car-number">
                     Համարանիշ
                   </FieldLabel>
                   <TextInput
