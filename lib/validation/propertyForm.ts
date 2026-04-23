@@ -12,52 +12,148 @@ const phoneItem = z
 
 const emailItem = z.string().trim().email("Անվավեր էլ. փոստ");
 
-function contactList(item: z.ZodString, minMsg: string) {
-  return z
-    .array(z.string())
-    .max(5)
-    .transform((arr) => arr.map((s) => s.trim()).filter((s) => s.length > 0))
-    .pipe(z.array(item).min(1, minMsg).max(5));
+const optionalPhoneSlot = z
+  .string()
+  .trim()
+  .pipe(z.union([z.literal(""), phoneItem]));
+
+const optionalEmailSlot = z
+  .string()
+  .trim()
+  .pipe(z.union([z.literal(""), emailItem]));
+
+const fivePhoneKeys = ["phone1", "phone2", "phone3", "phone4", "phone5"] as const;
+const fiveEmailKeys = ["email1", "email2", "email3", "email4", "email5"] as const;
+
+function compactNonEmptyPhones(
+  o: Record<(typeof fivePhoneKeys)[number], string>,
+): string[] {
+  return fivePhoneKeys.map((k) => o[k].trim()).filter((s) => s.length > 0);
 }
 
-/** Նոր սեփականատիրոջ համար՝ միայն մեկ հեռախոս և մեկ էլ. փոստ */
-function singleContact(item: z.ZodString, requiredMsg: string) {
-  return z
-    .array(z.string())
-    .max(1, "Թույլատրվում է միայն մեկ մուտք")
-    .transform((arr) => arr.map((s) => s.trim()).filter((s) => s.length > 0))
-    .pipe(z.array(item).length(1, requiredMsg));
+function compactNonEmptyEmails(
+  o: Record<(typeof fiveEmailKeys)[number], string>,
+): string[] {
+  return fiveEmailKeys.map((k) => o[k].trim()).filter((s) => s.length > 0);
 }
 
-/** «Այլևս սեփականատեր չեմ» ռեժիմ՝ նոր սեփականատիրոջ դաշտերը լրացուցիչ են */
-function singleOptionalContact(item: z.ZodString) {
-  return z
-    .array(z.string())
-    .max(1, "Թույլատրվում է միայն մեկ մուտք")
-    .transform((arr) => arr.map((s) => s.trim()).filter((s) => s.length > 0))
-    .pipe(z.array(item).max(1));
-}
+export const commonFieldsSchema = z
+  .object({
+    propertyUniqueId: z.string().trim().min(1, "Լրացրեք գույքի նույնացուցիչը").max(200),
+    ownerName: z.string().trim().min(1, "Լրացրեք սեփականատիրոջ անունը").max(200),
+    phone1: optionalPhoneSlot,
+    phone2: optionalPhoneSlot,
+    phone3: optionalPhoneSlot,
+    phone4: optionalPhoneSlot,
+    phone5: optionalPhoneSlot,
+    email1: optionalEmailSlot,
+    email2: optionalEmailSlot,
+    email3: optionalEmailSlot,
+    email4: optionalEmailSlot,
+    email5: optionalEmailSlot,
+    carBrand: z.string().trim().min(1, "Լրացրեք մակնիշը").max(100),
+    carModel: z.string().trim().min(1, "Լրացրեք մոդելը").max(100),
+    carColor: z.string().trim().min(1, "Լրացրեք գույնը").max(100),
+    carNumber: z.string().trim().min(1, "Լրացրեք համարանիշը").max(50),
+    car2Brand: z.string().trim().max(100).optional().default(""),
+    car2Model: z.string().trim().max(100).optional().default(""),
+    car2Color: z.string().trim().max(100).optional().default(""),
+    car2Number: z.string().trim().max(50).optional().default(""),
+  })
+  .superRefine((data, ctx) => {
+    const phones = compactNonEmptyPhones(data);
+    if (phones.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Ավելացրեք առնվազն մեկ հեռախոսահամար",
+        path: ["phone1"],
+      });
+    }
 
-export const commonFieldsSchema = z.object({
-  propertyUniqueId: z.string().trim().min(1, "Լրացրեք գույքի նույնացուցիչը").max(200),
-  ownerName: z.string().trim().min(1, "Լրացրեք սեփականատիրոջ անունը").max(200),
-  phones: contactList(phoneItem, "Ավելացրեք առնվազն մեկ հեռախոսահամար"),
-  emails: contactList(emailItem, "Ավելացրեք առնվազն մեկ էլ. փոստ"),
-  carBrand: z.string().trim().min(1, "Լրացրեք մակնիշը").max(100),
-  carModel: z.string().trim().min(1, "Լրացրեք մոդելը").max(100),
-  carColor: z.string().trim().min(1, "Լրացրեք գույնը").max(100),
-  carNumber: z.string().trim().min(1, "Լրացրեք համարանիշը").max(50),
-});
+    const emails = compactNonEmptyEmails(data);
+    if (emails.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Ավելացրեք առնվազն մեկ էլ. փոստ",
+        path: ["email1"],
+      });
+    }
+
+    const c2 = [
+      (data.car2Brand ?? "").trim(),
+      (data.car2Model ?? "").trim(),
+      (data.car2Color ?? "").trim(),
+      (data.car2Number ?? "").trim(),
+    ];
+    const anyC2 = c2.some((s) => s.length > 0);
+    if (anyC2) {
+      if (!c2[0]) {
+        ctx.addIssue({ code: "custom", message: "Լրացրեք երկրորդ մեքենայի մակնիշը", path: ["car2Brand"] });
+      }
+      if (!c2[1]) {
+        ctx.addIssue({ code: "custom", message: "Լրացրեք երկրորդ մեքենայի մոդելը", path: ["car2Model"] });
+      }
+      if (!c2[2]) {
+        ctx.addIssue({ code: "custom", message: "Լրացրեք երկրորդ մեքենայի գույնը", path: ["car2Color"] });
+      }
+      if (!c2[3]) {
+        ctx.addIssue({ code: "custom", message: "Լրացրեք երկրորդ մեքենայի համարանիշը", path: ["car2Number"] });
+      }
+    }
+  })
+  .transform((data) => {
+    const phones = compactNonEmptyPhones(data);
+    const emails = compactNonEmptyEmails(data);
+    const c2 = [
+      (data.car2Brand ?? "").trim(),
+      (data.car2Model ?? "").trim(),
+      (data.car2Color ?? "").trim(),
+      (data.car2Number ?? "").trim(),
+    ];
+    const hasSecondCar = c2.some((s) => s.length > 0);
+    return {
+      propertyUniqueId: data.propertyUniqueId.trim(),
+      ownerName: data.ownerName.trim(),
+      phone1: phones[0] ?? "",
+      phone2: phones[1] ?? "",
+      phone3: phones[2] ?? "",
+      phone4: phones[3] ?? "",
+      phone5: phones[4] ?? "",
+      email1: emails[0] ?? "",
+      email2: emails[1] ?? "",
+      email3: emails[2] ?? "",
+      email4: emails[3] ?? "",
+      email5: emails[4] ?? "",
+      carBrand: data.carBrand.trim(),
+      carModel: data.carModel.trim(),
+      carColor: data.carColor.trim(),
+      carNumber: data.carNumber.trim(),
+      car2Brand: hasSecondCar ? c2[0]! : "",
+      car2Model: hasSecondCar ? c2[1]! : "",
+      car2Color: hasSecondCar ? c2[2]! : "",
+      car2Number: hasSecondCar ? c2[3]! : "",
+    };
+  });
 
 export const newOwnerSchema = z.object({
+  propertyUniqueId: z.string().trim().min(1, "Լրացրեք գույքի նույնացուցիչը").max(200),
   name: z.string().trim().max(200),
-  phones: singleOptionalContact(phoneItem),
+  phone1: z
+    .string()
+    .trim()
+    .pipe(z.union([z.literal(""), phoneItem])),
 });
 
 export const renterSchema = z.object({
-  name: z.string().trim().min(1, "Լրացրեք վարձակալի անունը").max(200),
-  phones: singleContact(phoneItem, "Լրացրեք վարձակալի հեռախոսահամարը"),
-  emails: singleContact(emailItem, "Լրացրեք վարձակալի էլ. փոստը"),
+  name: z.string().trim().max(200),
+  phone1: z
+    .string()
+    .trim()
+    .pipe(z.union([z.literal(""), phoneItem])),
+  email1: z
+    .string()
+    .trim()
+    .pipe(z.union([z.literal(""), emailItem])),
 });
 
 const flagsSchema = z.object({
@@ -118,29 +214,25 @@ export const rawSubmissionSchema = z
     }
 
     if (forRent) {
-      if (!val.renter) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Լրացրեք վարձակալի տվյալները",
-          path: ["renter"],
-        });
-      } else if (val.common) {
-        const phoneTotal = val.common.phones.length + val.renter.phones.length;
-        if (phoneTotal > 5) {
+      if (val.common && val.renter) {
+        const ownerPhoneCount = compactNonEmptyPhones(val.common).length;
+        const renterPhoneCount = val.renter.phone1.trim().length > 0 ? 1 : 0;
+        if (ownerPhoneCount + renterPhoneCount > 5) {
           ctx.addIssue({
             code: "custom",
             message:
               "Վարձակալն ունի մեկ հեռախոս; սեփականատիրոջ հեռախոսների թիվը այս ռեժիմում առավելագույնը 4 է, որ ընդհանուրը լինի 5։",
-            path: ["common", "phones"],
+            path: ["common", "phone1"],
           });
         }
-        const emailTotal = val.common.emails.length + val.renter.emails.length;
-        if (emailTotal > 5) {
+        const ownerEmailCount = compactNonEmptyEmails(val.common).length;
+        const renterEmailCount = val.renter.email1.trim().length > 0 ? 1 : 0;
+        if (ownerEmailCount + renterEmailCount > 5) {
           ctx.addIssue({
             code: "custom",
             message:
               "Վարձակալն ունի մեկ էլ. փոստ; սեփականատիրոջ էլ. փոստերի թիվը այս ռեժիմում առավելագույնը 4 է, որ ընդհանուրը լինի 5։",
-            path: ["common", "emails"],
+            path: ["common", "email1"],
           });
         }
       }
