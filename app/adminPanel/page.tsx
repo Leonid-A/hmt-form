@@ -85,7 +85,9 @@ async function getSubmissions(): Promise<SubmissionRow[]> {
   const { mongodb } = getServerConfig();
   const coll = client.db(mongodb.dbName).collection(mongodb.collectionName);
   const docs = await coll.find({}).sort({ submittedAt: -1 }).limit(500).toArray();
-  return (docs as RawDoc[]).map(toRow);
+  const rows = (docs as RawDoc[]).map(toRow);
+  // Ensure the result is fully serializable before crossing the server→client boundary
+  return JSON.parse(JSON.stringify(rows)) as SubmissionRow[];
 }
 
 export default async function AdminPanelPage() {
