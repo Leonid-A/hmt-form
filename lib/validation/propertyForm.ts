@@ -64,8 +64,8 @@ export const commonFieldsSchema = z
     car2Model: z.string().trim().max(100).optional().default(""),
     car2Color: z.string().trim().max(100).optional().default(""),
     car2Number: z.string().trim().max(50).optional().default(""),
-    car1PhotoUrls: z.array(z.string().url()).optional().default([]),
-    car2PhotoUrls: z.array(z.string().url()).optional().default([]),
+    car1PhotoUrls: z.array(z.string().url()).max(2).optional().default([]),
+    car2PhotoUrls: z.array(z.string().url()).max(2).optional().default([]),
   })
   .superRefine((data, ctx) => {
     const phones = compactNonEmptyPhones(data);

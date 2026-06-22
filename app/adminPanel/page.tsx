@@ -65,18 +65,12 @@ function toRow(doc: RawDoc): SubmissionRow {
     carNumber: c?.carNumber ?? "",
     car1Photo1: slot(c?.car1PhotoUrls, 0),
     car1Photo2: slot(c?.car1PhotoUrls, 1),
-    car1Photo3: slot(c?.car1PhotoUrls, 2),
-    car1Photo4: slot(c?.car1PhotoUrls, 3),
-    car1Photo5: slot(c?.car1PhotoUrls, 4),
     car2Brand: c?.car2Brand ?? "",
     car2Model: c?.car2Model ?? "",
     car2Color: c?.car2Color ?? "",
     car2Number: c?.car2Number ?? "",
     car2Photo1: slot(c?.car2PhotoUrls, 0),
     car2Photo2: slot(c?.car2PhotoUrls, 1),
-    car2Photo3: slot(c?.car2PhotoUrls, 2),
-    car2Photo4: slot(c?.car2PhotoUrls, 3),
-    car2Photo5: slot(c?.car2PhotoUrls, 4),
   };
 }
 
