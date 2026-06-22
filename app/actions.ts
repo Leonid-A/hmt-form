@@ -63,6 +63,7 @@ export async function submitPropertyForm(
     const coll = client.db(mongodb.dbName).collection(mongodb.collectionName);
     await coll.insertOne(doc);
   } catch (e) {
+
     console.error(e);
     return initialError(
       "Չհաջողվեց պահպանել տվյալները։ Ստուգեք MongoDB կապը (.env.local)։",
