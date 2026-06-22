@@ -1,18 +1,6 @@
 import { google } from "googleapis";
 import { Readable } from "stream";
 
-function getCredentials(): Record<string, unknown> {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim() ?? "";
-  if (!raw) throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is not set");
-  let jsonStr = raw;
-  try {
-    JSON.parse(raw);
-  } catch {
-    jsonStr = Buffer.from(raw, "base64").toString("utf8");
-  }
-  return JSON.parse(jsonStr) as Record<string, unknown>;
-}
-
 function getParentFolderId(): string {
   const id = process.env.DRIVE_UPLOAD_PARENT_FOLDER_ID?.trim() ?? "";
   if (!id) throw new Error("DRIVE_UPLOAD_PARENT_FOLDER_ID is not set");
@@ -20,11 +8,18 @@ function getParentFolderId(): string {
 }
 
 function buildDriveClient() {
-  const credentials = getCredentials();
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/drive"],
-  });
+  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
+  const refreshToken = process.env.GOOGLE_OAUTH_REFRESH_TOKEN?.trim();
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error(
+      "GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET and GOOGLE_OAUTH_REFRESH_TOKEN must all be set",
+    );
+  }
+
+  const auth = new google.auth.OAuth2(clientId, clientSecret);
+  auth.setCredentials({ refresh_token: refreshToken });
   return google.drive({ version: "v3", auth });
 }
 

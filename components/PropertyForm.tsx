@@ -82,7 +82,7 @@ function compactToFiveSlots(values: string[]): [string, string, string, string, 
   ];
 }
 
-type SubmissionModeRadio = "owner" | "notOwner" | "forRent";
+type SubmissionModeRadio = "owner" | "forRent";
 
 const RADIO_GROUP_NAME = "submission-mode";
 
@@ -419,12 +419,10 @@ function CarPhotoUploader({
 }
 
 export function PropertyForm() {
-  const [notOwnerAnymore, setNotOwnerAnymore] = useState(false);
   const [forRent, setForRent] = useState(false);
   const [hasSecondCar, setHasSecondCar] = useState(false);
 
   const [common, setCommon] = useState<CommonState>(emptyCommon);
-  const [newOwner, setNewOwner] = useState<NewOwnerState>(emptyNewOwner);
   const [renter, setRenter] = useState<PersonContactState>(emptyPerson);
 
   const [state, formAction, isPending] = useActionState(submitPropertyForm, null);
@@ -457,7 +455,7 @@ export function PropertyForm() {
     : common.emails.length;
 
   useEffect(() => {
-    if (!forRent || notOwnerAnymore) return;
+    if (!forRent) return;
     const c = commonRef.current;
     const r = renterRef.current;
 
@@ -493,7 +491,6 @@ export function PropertyForm() {
     setRenter((prev) => ({ ...prev, phone1: nextRenterPhone, email1: nextRenterEmail }));
   }, [
     forRent,
-    notOwnerAnymore,
     common.phones.length,
     renter.phone1,
     common.emails.length,
@@ -553,17 +550,11 @@ export function PropertyForm() {
       car2PhotoUrls: hasSecondCar ? car2Photos.map((p) => p.webViewLink) : [],
     };
     return JSON.stringify({
-      flags: { notOwnerAnymore, forRent },
-      common: notOwnerAnymore ? null : commonFlat,
-      newOwner: notOwnerAnymore
-        ? {
-            propertyUniqueId: common.propertyUniqueId,
-            name: newOwner.name,
-            phone1: newOwner.phone1,
-          }
-        : null,
+      flags: { notOwnerAnymore: false, forRent },
+      common: commonFlat,
+      newOwner: null,
       renter:
-        !notOwnerAnymore && forRent
+        forRent
           ? renter.name.trim() === "" &&
               renter.phone1.trim() === "" &&
               renter.email1.trim() === ""
@@ -571,7 +562,7 @@ export function PropertyForm() {
             : { name: renter.name, phone1: renter.phone1, email1: renter.email1 }
           : null,
     });
-  }, [car1Photos, car2Photos, common, forRent, hasSecondCar, newOwner, notOwnerAnymore, renter]);
+  }, [car1Photos, car2Photos, common, forRent, hasSecondCar, renter]);
 
   function updateCommon<K extends keyof CommonState>(key: K, value: CommonState[K]) {
     setCommon((c) => ({ ...c, [key]: value }));
@@ -611,26 +602,13 @@ export function PropertyForm() {
     );
   }
 
-  const submissionMode: SubmissionModeRadio = notOwnerAnymore
-    ? "notOwner"
-    : forRent
-      ? "forRent"
-      : "owner";
+  const submissionMode: SubmissionModeRadio = forRent ? "forRent" : "owner";
 
   function applySubmissionMode(mode: SubmissionModeRadio) {
     if (mode === "owner") {
-      setNotOwnerAnymore(false);
       setForRent(false);
       return;
     }
-    if (mode === "notOwner") {
-      setNotOwnerAnymore(true);
-      setForRent(false);
-      setHasSecondCar(false);
-      setNewOwner(emptyNewOwner());
-      return;
-    }
-    setNotOwnerAnymore(false);
     setForRent(true);
     setRenter(emptyPerson());
   }
@@ -715,27 +693,7 @@ export function PropertyForm() {
                 : "min-w-0 text-sm font-medium text-zinc-900 dark:text-zinc-50"
             }
           >
-            Սեփականատիրոջ ընդհանուր տվյալներ
-          </span>
-        </label>
-
-        <label className={submissionModeRowClass(submissionMode === "notOwner")}>
-          <input
-            type="radio"
-            name={RADIO_GROUP_NAME}
-            value="notOwner"
-            className={RADIO_INPUT_CLASS}
-            checked={submissionMode === "notOwner"}
-            onChange={() => applySubmissionMode("notOwner")}
-          />
-          <span
-            className={
-              submissionMode === "notOwner"
-                ? "min-w-0 text-sm font-semibold text-sky-950 dark:text-sky-100"
-                : "min-w-0 text-sm font-medium text-zinc-900 dark:text-zinc-50"
-            }
-          >
-            Այլևս սեփականատեր չեմ
+            Սեփականատեր
           </span>
         </label>
 
@@ -755,40 +713,14 @@ export function PropertyForm() {
                 : "min-w-0 text-sm font-medium text-zinc-900 dark:text-zinc-50"
             }
           >
-            Սեփականատերը տալիս է վարձակալության
+            Վարձակալ
           </span>
         </label>
       </div>
 
       <form action={formAction} className="mt-8 space-y-8">
         <input type="hidden" name="payload" value={payload} readOnly />
-        {notOwnerAnymore ? (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-              Նոր սեփականատեր
-            </h3>
-            <div>
-              <FieldLabel htmlFor="newOwner-name">Անուն</FieldLabel>
-              <TextInput
-                id="newOwner-name"
-                value={newOwner.name}
-                onChange={(e) => setNewOwner((p) => ({ ...p, name: e.target.value }))}
-              />
-            </div>
-            <div>
-              <FieldLabel htmlFor="newOwner-phone">Հեռախոսահամար</FieldLabel>
-              <TextInput
-                id="newOwner-phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                value={newOwner.phone1}
-                onChange={(e) => setNewOwner((p) => ({ ...p, phone1: e.target.value }))}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
+        <div className="space-y-6">
             <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               Ընդհանուր տվյալներ
             </h3>
@@ -1025,7 +957,6 @@ export function PropertyForm() {
               )}
             </div>
           </div>
-        )}
 
         {state?.ok === false ? (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">

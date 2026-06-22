@@ -22,7 +22,7 @@ export default function Home() {
       </header>
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-4 py-10 sm:px-6">
-        <section className="space-y-3">
+        <section className="space-y-4">
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
             {siteConfig.heroTitle}
           </h1>
