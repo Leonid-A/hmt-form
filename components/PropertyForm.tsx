@@ -2,6 +2,7 @@
 
 import {
   useActionState,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -252,6 +253,172 @@ function StringListEditor({
   );
 }
 
+type UploadedPhoto = {
+  fileId: string;
+  webViewLink: string;
+  name: string;
+  previewUrl: string;
+};
+
+function CarPhotoUploader({
+  carSlot,
+  propertyId,
+  photos,
+  onChange,
+}: {
+  carSlot: "car1" | "car2";
+  propertyId: string;
+  photos: UploadedPhoto[];
+  onChange: (photos: UploadedPhoto[]) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const MAX_PHOTOS = 2;
+  const atLimit = photos.length >= MAX_PHOTOS;
+
+  const handleFiles = useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return;
+      if (!propertyId.trim()) {
+        setError("Նախ լրացրեք Գույքի նույնացուցիչը");
+        return;
+      }
+      if (photos.length + files.length > MAX_PHOTOS) {
+        setError(`Ընտրեք առավելագույնը ${MAX_PHOTOS} նկար`);
+        return;
+      }
+      const slots = MAX_PHOTOS - photos.length;
+      if (slots <= 0) return;
+      setError(null);
+      setUploading(true);
+      const added: UploadedPhoto[] = [];
+      for (const file of Array.from(files).slice(0, slots)) {
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("propertyId", propertyId.trim());
+          const res = await fetch("/api/upload", { method: "POST", body: fd });
+          if (!res.ok) {
+            const body = (await res.json()) as { error?: string };
+            throw new Error(body.error ?? "Upload failed");
+          }
+          const data = (await res.json()) as { fileId: string; webViewLink: string };
+          added.push({
+            fileId: data.fileId,
+            webViewLink: data.webViewLink,
+            name: file.name,
+            previewUrl: URL.createObjectURL(file),
+          });
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Բեռնման սխալ");
+        }
+      }
+      if (added.length > 0) onChange([...photos, ...added]);
+      setUploading(false);
+    },
+    [photos, onChange, propertyId],
+  );
+
+  function removePhoto(fileId: string) {
+    onChange(photos.filter((p) => p.fileId !== fileId));
+  }
+
+  const inputId = `car-photo-input-${carSlot}`;
+
+  return (
+    <div className="mt-2 space-y-2">
+      {error ? (
+        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+      ) : null}
+
+      {photos.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {photos.map((p) => (
+            <div key={p.fileId} className="group relative h-16 w-16 shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={p.previewUrl}
+                alt={p.name}
+                className="h-16 w-16 rounded-lg border border-zinc-200 object-cover dark:border-zinc-700"
+              />
+              <button
+                type="button"
+                onClick={() => removePhoto(p.fileId)}
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white opacity-0 transition group-hover:opacity-100 dark:bg-zinc-100 dark:text-zinc-900"
+                aria-label="Հեռացնել նկարը"
+              >
+                ×
+              </button>
+              <a
+                href={p.webViewLink}
+                target="_blank"
+                rel="noreferrer"
+                className="absolute inset-0 rounded-lg"
+                aria-label="Բացել Drive-ում"
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {atLimit ? (
+        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+          Առավելագույնը {MAX_PHOTOS} նկար
+        </p>
+      ) : (
+        <>
+          <input
+            ref={inputRef}
+            id={inputId}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            multiple={MAX_PHOTOS - photos.length > 1}
+            className="sr-only"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          <label
+            htmlFor={inputId}
+            className={[
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+              uploading
+                ? "cursor-not-allowed border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500"
+                : "border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-900",
+            ].join(" ")}
+            aria-disabled={uploading}
+          >
+            {uploading ? (
+              <>
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+                Բեռնվում է…
+              </>
+            ) : (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V4m0 0L8 8m4-4 4 4"
+                  />
+                </svg>
+                Ավելացնել նկար ({photos.length}/{MAX_PHOTOS})
+              </>
+            )}
+          </label>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function PropertyForm() {
   const [notOwnerAnymore, setNotOwnerAnymore] = useState(false);
   const [forRent, setForRent] = useState(false);
@@ -263,6 +430,14 @@ export function PropertyForm() {
 
   const [state, formAction, isPending] = useActionState(submitPropertyForm, null);
   const [prefillBanner, setPrefillBanner] = useState<"success" | "error" | null>(null);
+  const [car1Photos, setCar1Photos] = useState<UploadedPhoto[]>([]);
+  const [car2Photos, setCar2Photos] = useState<UploadedPhoto[]>([]);
+  const [propertyIdLocked, setPropertyIdLocked] = useState(false);
+  const [propertyIdTouched, setPropertyIdTouched] = useState(false);
+
+  function isValidPropertyId(v: string): boolean {
+    return /^A-\d+-\d+$/.test(v.trim());
+  }
 
   const commonRef = useRef(common);
   const renterRef = useRef(renter);
@@ -408,6 +583,8 @@ export function PropertyForm() {
       car2Model: hasSecondCar ? common.car2Model : "",
       car2Color: hasSecondCar ? common.car2Color : "",
       car2Number: hasSecondCar ? common.car2Number : "",
+      car1PhotoUrls: car1Photos.map((p) => p.webViewLink),
+      car2PhotoUrls: hasSecondCar ? car2Photos.map((p) => p.webViewLink) : [],
     };
     return JSON.stringify({
       flags: { notOwnerAnymore, forRent },
@@ -428,7 +605,7 @@ export function PropertyForm() {
             : { name: renter.name, phone1: renter.phone1, email1: renter.email1 }
           : null,
     });
-  }, [common, forRent, hasSecondCar, newOwner, notOwnerAnymore, renter]);
+  }, [car1Photos, car2Photos, common, forRent, hasSecondCar, newOwner, notOwnerAnymore, renter]);
 
   function updateCommon<K extends keyof CommonState>(key: K, value: CommonState[K]) {
     setCommon((c) => ({ ...c, [key]: value }));
@@ -522,15 +699,45 @@ export function PropertyForm() {
       ) : null}
       <div className="mb-6 space-y-1 sm:mb-8">
         <FieldLabel htmlFor="property-id" required>
-          Գույքի նույնացուցիչը համատիրությունում
+          Գույքի նույնացուցիչը համատիրությունում{" "}
+          <span className="font-normal text-zinc-400 dark:text-zinc-500">
+            (օր․՝ A-553-33)
+          </span>
         </FieldLabel>
-        <TextInput
-          id="property-id"
-          value={common.propertyUniqueId}
-          onChange={(e) => updateCommon("propertyUniqueId", e.target.value)}
-        />
+        <div className="flex gap-2">
+          <TextInput
+            id="property-id"
+            value={common.propertyUniqueId}
+            disabled={propertyIdLocked}
+            onChange={(e) => updateCommon("propertyUniqueId", e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                setPropertyIdTouched(true);
+                if (isValidPropertyId(common.propertyUniqueId)) setPropertyIdLocked(true);
+              }
+            }}
+          />
+          <button
+            type="button"
+            disabled={propertyIdLocked}
+            onClick={() => {
+              setPropertyIdTouched(true);
+              if (isValidPropertyId(common.propertyUniqueId)) setPropertyIdLocked(true);
+            }}
+            className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            Կիրառել
+          </button>
+        </div>
+        {propertyIdTouched && !propertyIdLocked && !isValidPropertyId(common.propertyUniqueId) ? (
+          <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">
+            Անվավեր բնակարանի նույնացուցիչ
+          </p>
+        ) : null}
       </div>
 
+      {!propertyIdLocked ? null :<>
       <div
         className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40"
         role="radiogroup"
@@ -771,6 +978,12 @@ export function PropertyForm() {
                     value={common.carNumber}
                     onChange={(e) => updateCommon("carNumber", e.target.value)}
                   />
+                  <CarPhotoUploader
+                    carSlot="car1"
+                    propertyId={common.propertyUniqueId}
+                    photos={car1Photos}
+                    onChange={setCar1Photos}
+                  />
                 </div>
               </div>
               {!hasSecondCar ? (
@@ -844,6 +1057,12 @@ export function PropertyForm() {
                         value={common.car2Number}
                         onChange={(e) => updateCommon("car2Number", e.target.value)}
                       />
+                      <CarPhotoUploader
+                        carSlot="car2"
+                        propertyId={common.propertyUniqueId}
+                        photos={car2Photos}
+                        onChange={setCar2Photos}
+                      />
                     </div>
                   </div>
                 </div>
@@ -866,6 +1085,7 @@ export function PropertyForm() {
           {isPending ? "Ուղարկվում է…" : "Ուղարկել"}
         </button>
       </form>
+      </>}
     </section>
   );
 }

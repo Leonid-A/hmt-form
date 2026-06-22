@@ -39,7 +39,12 @@ function compactNonEmptyEmails(
 
 export const commonFieldsSchema = z
   .object({
-    propertyUniqueId: z.string().trim().min(1, "Լրացրեք գույքի նույնացուցիչը").max(200),
+    propertyUniqueId: z
+      .string()
+      .trim()
+      .min(1, "Լրացրեք գույքի նույնացուցիչը")
+      .max(200)
+      .refine((v) => /^A-\d+-\d+$/.test(v), "Նույնացուցիչի ձևաչափը սխալ է (օր․՝ A-553-33)"),
     ownerName: z.string().trim().min(1, "Լրացրեք սեփականատիրոջ անունը").max(200),
     phone1: optionalPhoneSlot,
     phone2: optionalPhoneSlot,
@@ -59,6 +64,8 @@ export const commonFieldsSchema = z
     car2Model: z.string().trim().max(100).optional().default(""),
     car2Color: z.string().trim().max(100).optional().default(""),
     car2Number: z.string().trim().max(50).optional().default(""),
+    car1PhotoUrls: z.array(z.string().url()).optional().default([]),
+    car2PhotoUrls: z.array(z.string().url()).optional().default([]),
   })
   .superRefine((data, ctx) => {
     const phones = compactNonEmptyPhones(data);
@@ -161,11 +168,18 @@ export const commonFieldsSchema = z
       car2Model: hasSecondCar ? c2[1]! : "",
       car2Color: hasSecondCar ? c2[2]! : "",
       car2Number: hasSecondCar ? c2[3]! : "",
+      car1PhotoUrls: data.car1PhotoUrls ?? [],
+      car2PhotoUrls: hasSecondCar ? (data.car2PhotoUrls ?? []) : [],
     };
   });
 
 export const newOwnerSchema = z.object({
-  propertyUniqueId: z.string().trim().min(1, "Լրացրեք գույքի նույնացուցիչը").max(200),
+  propertyUniqueId: z
+    .string()
+    .trim()
+    .min(1, "Լրացրեք գույքի նույնացուցիչը")
+    .max(200)
+    .refine((v) => /^A-\d+-\d+$/.test(v), "Նույնացուցիչի ձևաչափը սխալ է (օր․՝ A-553-33)"),
   name: z.string().trim().max(200),
   phone1: z
     .string()
