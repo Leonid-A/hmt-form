@@ -13,7 +13,6 @@ import {
   type SetStateAction,
 } from "react";
 import { submitPropertyForm } from "@/app/actions";
-import type { PrefillApiResponse } from "@/lib/googleDrive/prefillPayload";
 
 type CommonState = {
   propertyUniqueId: string;
@@ -429,7 +428,6 @@ export function PropertyForm() {
   const [renter, setRenter] = useState<PersonContactState>(emptyPerson);
 
   const [state, formAction, isPending] = useActionState(submitPropertyForm, null);
-  const [prefillBanner, setPrefillBanner] = useState<"success" | "error" | null>(null);
   const [car1Photos, setCar1Photos] = useState<UploadedPhoto[]>([]);
   const [car2Photos, setCar2Photos] = useState<UploadedPhoto[]>([]);
   const [propertyIdLocked, setPropertyIdLocked] = useState(false);
@@ -502,38 +500,6 @@ export function PropertyForm() {
     renter.email1,
   ]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/prefill");
-        const body = (await res.json()) as PrefillApiResponse;
-        if (cancelled) return;
-        if (!body.ok) {
-          if (!body.skipped) setPrefillBanner("error");
-          return;
-        }
-        const d = body.data;
-        setNotOwnerAnymore(d.notOwnerAnymore);
-        setForRent(d.forRent);
-        setHasSecondCar(d.hasSecondCar);
-        setCommon({
-          ...emptyCommon(),
-          ...d.common,
-          phones: d.common.phones.length > 0 ? d.common.phones : [""],
-          emails: d.common.emails.length > 0 ? d.common.emails : [""],
-        });
-        setNewOwner({ ...emptyNewOwner(), ...d.newOwner });
-        setRenter({ ...emptyPerson(), ...d.renter });
-        setPrefillBanner("success");
-      } catch {
-        if (!cancelled) setPrefillBanner("error");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function addOwnerPhone() {
     setCommon((c) => {
@@ -687,16 +653,6 @@ export function PropertyForm() {
 
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-8">
-      {prefillBanner === "success" ? (
-        <p className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
-          Տվյալները բեռնվել են Google Drive-ից։
-        </p>
-      ) : null}
-      {prefillBanner === "error" ? (
-        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-          Նախլրացումը հնարավոր չեղավ (ստուգեք սերվերի կարգավորումը կամ CSV-ը)։
-        </p>
-      ) : null}
       <div className="mb-6 space-y-1 sm:mb-8">
         <FieldLabel htmlFor="property-id" required>
           Գույքի նույնացուցիչը համատիրությունում{" "}
